@@ -1,0 +1,15 @@
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.2.xsd">
+
+
+    <import resource="connection.xml"/>
+
+    <bean id="abstractSpringAMQPServiceMessageProducer" class="commons.msginfra.producers.impl.AbstractSpringAMQPServiceMessageProducer"
+          parent="abstractSpringAMQPAdmin" abstract="true" >
+    </bean>
+
+    <bean id="abstractSpringAMQPAdmin" class="commons.msginfra.producers.impl.AbstractSpringAMQPAdmin" abstract="true">
+        <property name="amqpAdmin" ref="rabbitAdmin"/>
+    </bean>
+
+</beans>

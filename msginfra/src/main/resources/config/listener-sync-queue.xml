@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.2.xsd
+                http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.2.xsd">
+
+    <import resource="connection.xml"/>
+
+    <!-- It means 16-64 simultaneous threads (lower-upper bound), 100 in queue and if 101th thread is called,
+         instead of adding it to queue this thread will run job itself -->
+    <task:executor id="serviceMessageTaskExecutor" pool-size="16-64"  queue-capacity="100" rejection-policy="CALLER_RUNS"/>
+
+    <bean id="rabbitListenerContainerSync"
+          class="org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer">
+        <constructor-arg ref="rabbitConnectionFactory" />
+        <property name="queueNames" value="ecra.service.sync.queue"></property>
+        <property name="messageListener" ref="receiveListenerAdapterSync"></property>
+        <property name="channelTransacted" value="true" />
+        <property name="acknowledgeMode" value="AUTO" />
+        <!-- This means don't give more than one message till the worker has successfully processed it -->
+        <property name="prefetchCount" value="1"/>
+    </bean>
+
+    <bean id="receiveListenerAdapterSync"
+          class="org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter">
+        <constructor-arg ref="messageReceiverSync" />
+        <property name="messageConverter" ref="jsonMessageConverter"></property>
+    </bean>
+
+
+    <bean id="messageReceiverSync" class="commons.msginfra.listeners.impl.DefaultServiceMessageSyncListener"/>
+
+    <bean id="serviceMessageListener" class="commons.msginfra.listeners.impl.DefaultServiceMessageListener" >
+        <property name="serviceMessageProcessor" ref="serviceMessageProcessor"/>
+    </bean>
+
+
+    <bean id="serviceMessageProcessor" class="commons.msginfra.processors.impl.DefaultServiceMessageProcessor" />
+
+</beans>

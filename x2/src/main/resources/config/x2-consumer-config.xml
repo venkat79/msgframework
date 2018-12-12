@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="http://www.springframework.org/schema/rabbit http://www.springframework.org/schema/rabbit/spring-rabbit.xsd
+                http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.2.xsd
+                http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.2.xsd">
+
+
+    <bean id="myRequestAlphaEventGenerator" class="consumer.x2.events.generators.MyRequestAlphaEventGenerator"/>
+
+    <bean id="myRequestBetaEventGenerator" class="consumer.x2.events.generators.MyRequestBetaEventGenerator"/>
+
+    <bean id="myRequestAlphaEventHandler" class="consumer.x2.events.handlers.impl.MyRequestAlphaEventHandlerImpl"/>
+
+    <bean id="myRequestBetaEventHandler" class="consumer.x2.events.handlers.impl.MyRequestBetaEventHandlerImpl"/>
+
+    <bean id="myRequestAlphaSyncProcessor" class="consumer.x2.events.processors.MyRequestAlphaSyncProcessor"/>
+
+</beans>

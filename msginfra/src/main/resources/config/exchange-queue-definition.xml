@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="http://www.springframework.org/schema/rabbit http://www.springframework.org/schema/rabbit/spring-rabbit.xsd
+                http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.2.xsd
+                http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.2.xsd">
+
+    <rabbit:queue name="ecra.service.queue">
+        <rabbit:queue-arguments>
+            <entry key="x-dead-letter-exchange" value="ecra.dead.exchange"/>
+            <entry key="x-message-ttl" value="100000" value-type="java.lang.Long"/>
+            <entry key="x-dead-letter-routing-key" value="ecra.dead.routingKey"/>
+        </rabbit:queue-arguments>
+    </rabbit:queue>
+    <rabbit:queue name="ecra.service.sync.queue"/>
+    <rabbit:queue name="ecra.dead.queue">
+    </rabbit:queue>
+
+    <rabbit:direct-exchange name="ecra.service.exchange">
+        <rabbit:bindings>
+            <rabbit:binding queue="ecra.service.queue" key="ecra.service.routingKey"></rabbit:binding>
+            <rabbit:binding queue="ecra.service.sync.queue" key="ecra.service.sync.routingKey"></rabbit:binding>
+        </rabbit:bindings>
+    </rabbit:direct-exchange>
+
+
+    <rabbit:direct-exchange name="ecra.dead.exchange">
+        <rabbit:bindings>
+            <rabbit:binding queue="ecra.dead.queue" key="ecra.dead.routingKey"></rabbit:binding>
+        </rabbit:bindings>
+    </rabbit:direct-exchange>
+
+</beans>

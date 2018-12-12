@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="http://www.springframework.org/schema/rabbit http://www.springframework.org/schema/rabbit/spring-rabbit.xsd
+                http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.2.xsd
+                http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.2.xsd">
+
+    <!-- Connection initializer XML -->
+    <import resource="connection.xml"/>
+
+    <!-- It means 16-64 simultaneous threads (lower-upper bound), 100 in queue and if 101th thread is called,
+         instead of adding it to queue this thread will run job itself -->
+    <task:executor id="serviceMessageTaskExecutor" pool-size="16-64"  queue-capacity="100" rejection-policy="CALLER_RUNS"/>
+
+    <!-- Make msg send/receive transaction based. More details later -->
+    <bean id="rabbitTransactionManager" class="org.springframework.amqp.rabbit.transaction.RabbitTransactionManager">
+        <property name="connectionFactory" ref="rabbitConnectionFactory"/>
+    </bean>
+
+
+    <rabbit:queue name="ecra.service.sync.queue"/>
+    <rabbit:direct-exchange name="ecra.service.exchange">
+        <rabbit:bindings>
+            <rabbit:binding queue="ecra.service.queue" key="ecra.service.routingKey"></rabbit:binding>
+            <rabbit:binding queue="ecra.service.sync.queue" key="ecra.service.sync.routingKey"></rabbit:binding>
+        </rabbit:bindings>
+    </rabbit:direct-exchange>
+
+    <rabbit:queue name="ecra.service.queue">
+        <rabbit:queue-arguments>
+            <entry key="x-dead-letter-exchange" value="ecra.dead.exchange"/>
+            <entry key="x-message-ttl" value="100000" value-type="java.lang.Long"/>
+            <entry key="x-dead-letter-routing-key" value="ecra.dead.routingKey"/>
+        </rabbit:queue-arguments>
+    </rabbit:queue>
+
+    <rabbit:queue name="ecra.dead.queue">
+    </rabbit:queue>
+
+    <rabbit:direct-exchange name="ecra.dead.exchange">
+        <rabbit:bindings>
+            <rabbit:binding queue="ecra.dead.queue" key="ecra.dead.routingKey"></rabbit:binding>
+        </rabbit:bindings>
+    </rabbit:direct-exchange>
+
+    <bean id="rabbitListenerContainer"
+          class="org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer">
+        <constructor-arg ref="rabbitConnectionFactory" />
+        <property name="queueNames" value="ecra.service.queue"></property>
+        <property name="messageListener" ref="receiveListenerAdapter"></property>
+        <property name="channelTransacted" value="true" />
+        <property name="acknowledgeMode" value="MANUAL" />
+        <!-- This means don't give more than one message till the worker has successfully processed it -->
+        <property name="prefetchCount" value="1"/>
+    </bean>
+
+
+    <bean id="rabbitListenerContainerSync"
+          class="org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer">
+        <constructor-arg ref="rabbitConnectionFactory" />
+        <property name="queueNames" value="ecra.service.sync.queue"></property>
+        <property name="messageListener" ref="receiveListenerAdapterSync"></property>
+        <property name="channelTransacted" value="true" />
+        <property name="acknowledgeMode" value="AUTO" />
+        <!-- This means don't give more than one message till the worker has successfully processed it -->
+        <property name="prefetchCount" value="1"/>
+    </bean>
+
+    <bean id="messageReceiver" class="commons.msginfra.listeners.impl.DefaultServiceMessageListener"/>
+    <bean id="messageReceiverSync" class="commons.msginfra.listeners.impl.DefaultServiceMessageSyncListener"/>
+
+    <bean id="receiveListenerAdapterSync"
+          class="org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter">
+        <constructor-arg ref="messageReceiverSync" />
+        <property name="messageConverter" ref="jsonMessageConverter"></property>
+    </bean>
+
+    <bean id="receiveListenerAdapter"
+          class="org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter">
+        <constructor-arg ref="messageReceiver" />
+        <property name="messageConverter" ref="jsonMessageConverter"></property>
+    </bean>
+
+    <bean id="serviceMessageListener" class="commons.msginfra.listeners.impl.DefaultServiceMessageListener" >
+        <property name="serviceMessageProcessor" ref="serviceMessageProcessor"/>
+    </bean>
+
+
+    <bean id="serviceMessageProcessor" class="commons.msginfra.processors.impl.DefaultServiceMessageProcessor" />
+
+
+</beans>
+
